@@ -23,12 +23,13 @@ class rectangle:
 
     def __and__(self, other_rect):
 
-        print('passed')
-
-        debug = True
+        debug = False
 
         Rx = min(self.bounding_box[2], other_rect.bounding_box[2])
         Ry = max(self.bounding_box[3], other_rect.bounding_box[3])
+
+        Rx, Ry = max(Rx, 0), max(Ry, 0)
+
 
         #100 , 100
 
@@ -40,8 +41,10 @@ class rectangle:
         height_1 = self.bounding_box[1] - self.bounding_box[3]
         height_2 = other_rect.bounding_box[1] - other_rect.bounding_box[3]
 
-        w = max(self.bounding_box[0] + width_1, other_rect.bounding_box[0] + width_2) - Rx
-        h = min(self.bounding_box[3] + height_1, other_rect.bounding_box[3] + height_2) - Ry
+        #w = max(self.bounding_box[0] + width_1, other_rect.bounding_box[0] + width_2) - Rx
+
+        w = Rx - max(self.bounding_box[0], other_rect.bounding_box[0])
+        h = max(self.bounding_box[1], other_rect.bounding_box[1]) - Ry
 
         if debug:
             print(f"Rx :{Rx} Ry:{Ry}")
@@ -53,9 +56,9 @@ class rectangle:
             print(w, h)
 
         if ( (w > 0) & (h > 0) ):
-            return [Rx, Ry, (Rx - w), (Ry + h)]
+            return rectangle(Rx, Ry, (Rx - w), (Ry + h))
         else:
-            return 0
+            return rectangle(Rx, Ry, self.bounding_box[0], (Ry + h))
 
     @staticmethod
     def checkin_range(bb_start, min_val, max_val):
@@ -148,7 +151,43 @@ class rectangle:
         else:
             return False
   
+    def IoU(self, other_rect):
+        debug = False
+        #calculate area of rect1
+        #calculate area of rect2
+        #add both areas
+	#calculate area of intersection
+        #subtract Area of intersection from total area of rect 1 and 2
+        #divide the area of intersection with the area of union
+        #return decimal
+        A1 = self.area()
+        A2 = other_rect.area()
 
+        intersectionObj = self & other_rect
+        intersectArea = intersectionObj.area()
+
+        unionArea = (A1 + A2) - intersectArea
+
+        IoU = intersectArea / unionArea
+
+        if debug ==  True:
+            print("INTERSECT AREA : ", intersectArea)
+            print("UNION AREA : ", unionArea)
+            print("IoU : ", IoU)
+        return IoU
+
+    def area(self):
+        #bottom_leftx, bottom_lefty, top_rightx, top_righty
+        #x1           y1                x2           y2
+        #bottom_lefty - top_righty     top_rightx-bottomleftx
+        #h = y1 - y2    w = x2-x1
+        #open cv coordinates y is inverted
+
+
+        x1, y1, x2, y2 = self.bounding_box[0], self.bounding_box[1], self.bounding_box[2], self.bounding_box[3]
+        h = y1 - y2
+        w = x2 - x1
+        return h * w
         
 
 """Class for ROI data"""
@@ -174,7 +213,7 @@ class ROI:
 
     def __init__(self, idx, original_center):
         self.idx = idx
-        print(original_center)
+        #print(original_center)
         self.original_center = original_center
 
     def update_idx(self, idx):

@@ -34,7 +34,7 @@ def color_quantize(img, K):
     return label_img, quantized_img
 
 
-def find_ROI(frame, visualize, Yolomodel):
+def find_ROI(frame, visualize):
 
   """
   This function takes in a frame and outputs the pixel coordinates and boundingbox
@@ -59,7 +59,7 @@ def find_ROI(frame, visualize, Yolomodel):
   #creating copy to processes on to preserve orginal frame
   cv2.imshow('original', frame)
   img = frame
-  img = cv2.Canny(img,400,600, L2gradient = True)
+  img = cv2.Canny(img,350,600, L2gradient = True)
 
   #orb object created to process image keypoints and descriptors
   orb = cv2.ORB_create(200)
@@ -114,7 +114,7 @@ def find_ROI(frame, visualize, Yolomodel):
 
 
   #size of ROI (rectangle)
-  height, width = 100, 100
+  height, width = 200, 200
 
   height_div2, width_div2 = height // 2, width // 2
 
@@ -123,8 +123,8 @@ def find_ROI(frame, visualize, Yolomodel):
     
     x, y = ROI.original_center[0], ROI.original_center[1]
     
-    top_rightx, top_righty = x + width_div2, y - height_div2
-    bottom_leftx, bottom_lefty = x - width_div2, y + height_div2
+    top_rightx, top_righty = max(0,x + width_div2), max(0,y - height_div2)
+    bottom_leftx, bottom_lefty = max(0,x - width_div2), max(0, y + height_div2)
 
     bb_rect = rectangle(bottom_leftx, bottom_lefty, top_rightx, top_righty)
 
@@ -141,7 +141,7 @@ def find_ROI(frame, visualize, Yolomodel):
   if visualize == True:
     cv2.imshow('bbframe', frame)
     cv2.imshow('bbfeatures', bb_featureSpace)
-    cv2.waitKey(2)
+    cv2.waitKey(1)
 
   return ROIS
 
