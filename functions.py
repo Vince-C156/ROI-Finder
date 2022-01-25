@@ -7,42 +7,17 @@ Using ORB feature detection to crop ROI with target
 
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-import torch
-from torch import nn
-
-
-def color_quantize(img, K):
-
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    
-    Z = img.reshape((-1, 3))
-
-    # convert to np.float32
-    Z = np.float32(Z)
-
-    # define criteria, number of clusters(K) and apply kmeans()
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-    ret, label, center = cv2.kmeans(Z, K, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-
-    # Now convert back into uint8, and make original image
-    center = np.uint8(center)
-    res = center[label.flatten()]
-    quantized_img = res.reshape((img.shape))
-
-    label_img = label.reshape((img.shape[:2]))
-    return label_img, quantized_img
 
 
 def find_ROI(frame, visualize):
 
   """
-  This function takes in a frame and outputs the pixel coordinates and boundingbox
-  crop of objected detected
+  This function takes in a frame and outputs a list of ROI objects which contain information about the region
+  such as center and crop coordinates
   
   input: frame from video (arbitrary dimension), True or False to visualize images
 
-  output: tuple with ROI crop and pixel coordinates relative to orginal images [(detection, img, [x,y]), (detection, img, [x,y]), ...]
+  output: list of ROI objects
   """
 
   from classes import ROI
@@ -59,7 +34,7 @@ def find_ROI(frame, visualize):
   #creating copy to processes on to preserve orginal frame
   cv2.imshow('original', frame)
   img = frame
-  img = cv2.Canny(img,350,600, L2gradient = True)
+  img = cv2.Canny(img,300, 600, L2gradient = True)
 
   #orb object created to process image keypoints and descriptors
   orb = cv2.ORB_create(200)
@@ -105,9 +80,25 @@ def find_ROI(frame, visualize):
         cY = 0
 
       if cv2.contourArea(c) > 300:
-        ROIS.append(ROI(len(ROIS), [cX, cY]))
+        region = ROI(len(ROIS), [cX, cY])
         
+        minRect = cv2.minAreaRect(c)
+        box = np.int0( cv2.boxPoints(minRect) )
+        
+        xmin, ymin = min(box[0:-1, 0]), min(box[0:-1, 1])
+        xmax, ymax = max(box[0:-1, 0]), max(box[0:-1, 1])        
 
+
+        #cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 256, 0), 1)
+        print(f"minimum {xmin} {ymin}")
+        print(f"maxmium {xmax} {ymax}")
+
+        cv2.drawContours(frame, [box], 0, color=(128, 128, 128), thickness=1)        
+        rect = rectangle(xmin, ymin, xmax, ymax)
+
+        region.add_rectObj(rect)
+        ROIS.append(region)
+        
       cv2.circle(threshold, (cX, cY), 7, (255, 255, 255), -1)
 
     cv2.drawContours(threshold, cnt, -1, (255,0,0), 5)
@@ -117,15 +108,16 @@ def find_ROI(frame, visualize):
   height, width = 200, 200
 
   height_div2, width_div2 = height // 2, width // 2
-
+  """
   #using centers of countours to draw bounding box
   for ROI in ROIS:
     
-    x, y = ROI.original_center[0], ROI.original_center[1]
-    
+
+    x, y = ROI.original_center[0], ROI.original_center[1]   
     top_rightx, top_righty = max(0,x + width_div2), max(0,y - height_div2)
     bottom_leftx, bottom_lefty = max(0,x - width_div2), max(0, y + height_div2)
 
+    #top_rightx, top_righty, bottom_leftx, bottom_lefty =
     bb_rect = rectangle(bottom_leftx, bottom_lefty, top_rightx, top_righty)
 
     ROI.add_rectObj(bb_rect)
@@ -136,7 +128,8 @@ def find_ROI(frame, visualize):
     if visualize == True:
       cv2.rectangle(frame, bottom_leftptn,top_rightptn,(128,128,128),5)
       cv2.rectangle(bb_featureSpace, bottom_leftptn ,top_rightptn,(128,128,128),5)
-      
+  """
+ 
 
   if visualize == True:
     cv2.imshow('bbframe', frame)

@@ -1,6 +1,5 @@
 import cv2
 import torch
-from torch import nn
 from functions import find_ROI
 import os
 
@@ -10,7 +9,7 @@ if __name__ == '__main__':
   debug = True
 
   """creating cv2 video capture"""
-  cap = cv2.VideoCapture('vid2.avi')
+  cap = cv2.VideoCapture('GOPR2256_Trim.mp4')
   cv2.waitKey(0)
 
   #frame limit for testing
@@ -23,8 +22,12 @@ if __name__ == '__main__':
 
   #methods for image matching to mimimize duplicates
   orb = cv2.ORB_create(50)
-  bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
+  FLANN_INDEX_LSH = 6
+  index_params= dict(algorithm = FLANN_INDEX_LSH, table_number = 6, key_size = 12, multi_probe_level = 1)
+  search_params = dict(checks=50)
+
+  flann = cv2.FlannBasedMatcher(index_params, search_params)
 
 
   """looping video"""
@@ -66,14 +69,18 @@ if __name__ == '__main__':
               if IoU >= 0.8:
                   x1, y1, x2, y2 = region.rectObj.bounding_box[0], region.rectObj.bounding_box[1], region.rectObj.bounding_box[2], region.rectObj.bounding_box[3]
 
-                  focused_region = frame[y2:y1, x1:x2]
+                  focused_region = frame[y1:y2, x1:x2]
 
                   #finding features of region to filter out duplicates
                   #then iterating through features of found ROI's to check for matches
 
                   kp, des1 = orb.detectAndCompute(focused_region, None)
                   for des2 in ROI_descriptors:
-                      num_matches = len(bf.match(des1, des2))
+                      if ( (des1 is not None and len(des1)>2) and (des2 is not None and len(des2)>2) ): 
+                          num_matches = len(flann.knnMatch(des1, des2, k=2))
+                      else:
+                          num_matches = 0
+
                       if num_matches >= 10:
                           duplicate = True
                           break
